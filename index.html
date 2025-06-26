@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pizza Finder</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Consolas&display=swap');
+        
+        :root {
+            --cursor-color: #0f0;
+        }
+        
+        body { 
+            font-family: 'Consolas', monospace; 
+            background: black; 
+            color: lime; 
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+            cursor: none;
+        }
+        
+        #terminal {
+            white-space: pre;
+            line-height: 1.3;
+            font-size: 18px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        #hidden-content {
+            display: none;
+            text-align: center;
+            padding-top: 50px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        #warning {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 24px;
+            margin-bottom: 10px;
+            animation: rainbowGlow 2s infinite alternate, shake 0.5s infinite alternate;
+        }
+        
+        #ip { 
+            font-size: 64px; 
+            font-weight: bold; 
+            margin: 20px;
+            animation: shake 0.5s infinite alternate, redPulse 1.5s infinite alternate;
+        }
+        
+        #system-info {
+            font-family: 'Consolas', monospace;
+            color: lime;
+            font-size: 18px;
+            margin-top: 30px;
+            line-height: 1.6;
+        }
+        
+        #webcam-feed {
+            width: 300px;
+            height: 225px;
+            margin: 20px auto;
+            border: 3px solid red;
+            display: none;
+            background: #111;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #webcam-static {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.8),
+                rgba(0, 0, 0, 0.8) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            display: none;
+            animation: static 0.1s infinite;
+        }
+        
+        #hack-progress {
+            width: 80%;
+            height: 30px;
+            margin: 20px auto;
+            border: 1px solid lime;
+            position: relative;
+            display: none;
+        }
+        
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(
+                90deg,
+                #ff0018 0%,
+                #ffa52c 15%,
+                #ffff41 30%,
+                #008018 45%,
+                #0000f9 60%,
+                #86007d 75%
+            );
+            transition: width 0.5s;
+        }
+        
+        #progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 30px;
+            color: black;
+            font-weight: bold;
+        }
+        
+        .matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .custom-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--cursor-color);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: difference;
+        }
+        
+        @keyframes redPulse {
+            0% { text-shadow: 0 0 5px red; }
+            100% { text-shadow: 0 0 30px red, 0 0 50px red; }
+        }
+        
+        @keyframes rainbowGlow {
+            0% { color: #ff0018; text-shadow: 0 0 10px #ff0018; }
+            14% { color: #ffa52c; text-shadow: 0 0 10px #ffa52c; }
+            28% { color: #ffff41; text-shadow: 0 0 10px #ffff41; }
+            42% { color: #008018; text-shadow: 0 0 10px #008018; }
+            56% { color: #0000f9; text-shadow: 0 0 10px #0000f9; }
+            70% { color: #86007d; text-shadow: 0 0 10px #86007d; }
+            100% { color: #ff0018; text-shadow: 0 0 10px #ff0018; }
+        }
+        
+        @keyframes shake {
+            0% { transform: translateX(-3px); }
+            100% { transform: translateX(3px); }
+        }
+        
+        @keyframes static {
+            0% { opacity: 0.8; }
+            50% { opacity: 0.5; }
+            100% { opacity: 0.8; }
+        }
+        
+        .system-label {
+            color: #00ffff;
+        }
+        
+        .system-value {
+            color: yellow;
+        }
+        
+        .error-value {
+            color: red;
+            font-style: italic;
+        }
+        
+        #keylogger-message {
+            display: none;
+            color: red;
+            font-size: 14px;
+            margin-top: 20px;
+            animation: blink 0.5s infinite;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal"></div>
+    
+    <div id="hidden-content">
+        <div id="warning"></div>
+        <div id="ip">IP LOADING...</div>
+        <div id="system-info"></div>
+        <div id="webcam-feed">
+            <div id="webcam-static"></div>
+        </div>
+        <div id="hack-progress">
+            <div id="progress-bar"></div>
+            <div id="progress-text">0%</div>
+        </div>
+        <div id="keylogger-message">KEYLOGGER ACTIVATED: Recording all keystrokes...</div>
+    </div>
+
+    <canvas id="matrix-rain" class="matrix-rain"></canvas>
+    <div class="custom-cursor"></div>
+
+    <audio id="scary-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-scary-horror-scream-2896.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-rain');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const nums = '0123456789';
+        const alphabet = katakana + latin + nums;
+        
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const rainDrops = [];
+        
+        for (let x = 0; x < columns; x++) {
+            rainDrops[x] = 1;
+        }
+        
+        const drawMatrix = () => {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0f0';
+            ctx.font = fontSize + 'px monospace';
+            
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        };
+        
+        setInterval(drawMatrix, 30);
+        
+        // Custom cursor
+        const cursor = document.querySelector('.custom-cursor');
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+        
+        // Check if it's night time
+        const isNightTime = () => {
+            const hour = new Date().getHours();
+            return hour > 20 || hour < 6;
+        };
+        
+        // Terminal simulation
+        const terminal = document.getElementById('terminal');
+        const messages = [
+            "Initializing pizza locator...",
+            "Searching for nearby pizzerias...",
+            "Analyzing cheese content...",
+            "Calculating optimal delivery route...",
+            "ERROR: No pizza found in your area",
+            "Switching to backup protocol...",
+            "Accessing mainframe...",
+            "Bypassing security...",
+            "CONNECTION ESTABLISHED",
+            ">_"
+        ];
+        
+        // Random warning message
+        const warningMessages = isNightTime() 
+            ? ["3AM LESBIAN HOURS", "why are you awake?"]
+            : ["haiii im lesbian :33", "hi xd"];
+        const randomWarning = warningMessages[Math.floor(Math.random() * warningMessages.length)];
+        document.getElementById('warning').innerText = randomWarning;
+        
+        let i = 0;
+        const termInterval = setInterval(() => {
+            if (i < messages.length) {
+                terminal.innerHTML += messages[i] + '<br>';
+                i++;
+                window.scrollTo(0, document.body.scrollHeight);
+            } else {
+                clearInterval(termInterval);
+                // Show the scary content
+                document.getElementById('terminal').style.display = 'none';
+                document.getElementById('hidden-content').style.display = 'block';
+                document.getElementById('hack-progress').style.display = 'block';
+                document.getElementById('keylogger-message').style.display = 'block';
+                
+                // Play scary sound
+                const sound = document.getElementById('scary-sound');
+                sound.volume = 0.3;
+                sound.play().catch(e => console.log("Audio blocked:", e));
+                
+                // Animate fake hack progress
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 100) progress = 100;
+                    document.getElementById('progress-bar').style.width = progress + '%';
+                    document.getElementById('progress-text').innerText = Math.floor(progress) + '%';
+                    
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                    }
+                }, 200);
+                
+                // Get IP and system info
+                fetch('https://api.ipify.org?format=json')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('ip').innerText = data.ip;
+                        return fetch(`https://ipapi.co/${data.ip}/json/`);
+                    })
+                    .then(response => response.json())
+                    .then(locationData => {
+                        detectSystemInfo();
+                        displayLocationInfo(locationData);
+                        tryWebcam();
+                    })
+                    .catch(error => {
+                        document.getElementById('ip').innerText = "IP NOT FOUND";
+                        detectSystemInfo();
+                        displayLocationInfo(null);
+                        tryWebcam();
+                    });
+            }
+        }, 800);
+        
+        // Try to access webcam (fake)
+        function tryWebcam() {
+            setTimeout(() => {
+                document.getElementById('webcam-feed').style.display = 'block';
+                document.getElementById('webcam-static').style.display = 'block';
+                
+                setTimeout(() => {
+                    document.getElementById('webcam-static').innerHTML = 
+                        '<div style="color:red;text-align:center;padding-top:90px;">WEBCAM CONNECTION FAILED</div>';
+                }, 1500);
+            }, 3000);
+        }
+        
+        // Display location information
+        function displayLocationInfo(data) {
+            const systemInfo = document.getElementById('system-info');
+            let locationHTML = '';
+            
+            if (data && !data.error) {
+                locationHTML += `
+                    <div><span class="system-label">Country:</span> <span class="system-value">${data.country_name || 'Unnable to catch >:('}</span></div>
+                    <div><span class="system-label">City:</span> <span class="system-value">${data.city || 'Unnable to catch >:('}</span></div>
+                    <div><span class="system-label">ISP:</span> <span class="system-value">${data.org || 'Unknown'}</span></div>
+                `;
+            } else {
+                locationHTML += `
+                    <div><span class="system-label">Country:</span> <span class="error-value">Unnable to catch >:(</span></div>
+                    <div><span class="system-label">City:</span> <span class="error-value">Unnable to catch >:(</span></div>
+                    <div><span class="system-label">ISP:</span> <span class="error-value">Unknown</span></div>
+                `;
+            }
+            
+            // Append to existing system info
+            systemInfo.innerHTML += locationHTML;
+        }
+        
+        // Detect system info
+        function detectSystemInfo() {
+            const userAgent = navigator.userAgent;
+            let os = "Unknown OS";
+            let osVersion = "";
+            let browser = "Unknown";
+            let engine = "";
+            let deviceType = "Unknown";
+            let screenSize = `${window.screen.width} × ${window.screen.height}`;
+            
+            // Detect device type
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(userAgent)) {
+                deviceType = "Mobile";
+            } else {
+                // Differentiate between laptop and desktop (very rough approximation)
+                deviceType = window.screen.width > 1440 ? "Desktop" : "Laptop";
+            }
+            
+            // Detect OS
+            if (userAgent.includes("Windows NT 10.0")) {
+                os = "Windows";
+                osVersion = "10";
+            } else if (userAgent.includes("Windows NT 11.0") || userAgent.includes("Windows 11")) {
+                os = "Windows";
+                osVersion = "11";
+            } else if (userAgent.includes("Windows")) {
+                os = "Windows";
+                osVersion = "11+";
+            } else if (userAgent.includes("Macintosh")) {
+                os = "MacOS";
+                if (userAgent.includes("Mac OS X 10_15")) osVersion = "Catalina (10.15)";
+                else if (userAgent.includes("Mac OS X 11_")) osVersion = "Big Sur (11)";
+                else if (userAgent.includes("Mac OS X 12_")) osVersion = "Monterey (12)";
+                else if (userAgent.includes("Mac OS X 13_")) osVersion = "Ventura (13)";
+                else if (userAgent.includes("Mac OS X 14_")) osVersion = "Sonoma (14)";
+                else osVersion = "Unknown Ver";
+            } else if (userAgent.includes("Linux")) {
+                os = "Linux";
+            } else if (userAgent.includes("Android")) {
+                os = "Android";
+            } else if (userAgent.includes("iOS")) {
+                os = "iOS";
+            }
+            
+            // Detect browser
+            if (userAgent.includes("Firefox")) {
+                browser = "Firefox";
+                engine = "Gecko";
+            } else if (userAgent.includes("Chrome")) {
+                browser = "Google Chrome";
+                engine = "Chromium";
+            } else if (userAgent.includes("Safari")) {
+                browser = "Apple Safari";
+                engine = "WebKit";
+            } else if (userAgent.includes("Edg")) {
+                browser = "Microsoft Edge";
+                engine = "Chromium";
+            } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
+                browser = "Opera";
+                engine = "Chromium";
+            }
+            
+            // Display system info
+            const systemInfo = document.getElementById('system-info');
+            systemInfo.innerHTML = `
+                <div><span class="system-label">Operating System:</span> <span class="system-value">${os}${osVersion ? ` [${osVersion}]` : ''}</span></div>
+                <div><span class="system-label">Device Type:</span> <span class="system-value">${deviceType}</span></div>
+                <div><span class="system-label">Screen Size:</span> <span class="system-value">${screenSize}</span></div>
+                <div><span class="system-label">Your Browser:</span> <span class="system-value">${browser}${engine ? ` [${engine}]` : ''}</span></div>
+            `;
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Fake keylogger detection
+        document.addEventListener('keydown', (e) => {
+            const keyloggerMsg = document.getElementById('keylogger-message');
+            keyloggerMsg.textContent = `KEYLOGGER: Last key pressed - ${e.key.toUpperCase()} (Code: ${e.code})`;
+        });
+        
+        // Easter egg - change cursor color randomly
+        setInterval(() => {
+            const colors = ['#0f0', '#f00', '#00f', '#ff0', '#f0f', '#0ff'];
+            document.documentElement.style.setProperty(
+                '--cursor-color', 
+                colors[Math.floor(Math.random() * colors.length)]
+            );
+        }, 1000);
+    </script>
+</body>
+</html>
